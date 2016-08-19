@@ -36,16 +36,47 @@
   :group 'languages
   :prefix "nand-hdl-")
 
+(defcustom nand-hdl-directory "nand2tetris"
+  "Location of base directory 'nand2tetris', it should contain
+the 'tools' directory."
+  :group 'nand-hdl
+  :type 'file)
+
+(defcustom nand-hdl-emulator
+  (and nand-hdl-directory
+       (concat (expand-file-name
+                (concat "tools/HardwareSimulator"
+                        (if (eq system-type 'windows-nt)
+                            ".bat" ".sh"))
+                nand-hdl-directory)))
+  "Location of 'HardwardSimulator'.  Used to run script and output
+to compilation buffer."
+  :group 'nand-hdl
+  :type 'file)
+
 (defcustom nand-hdl-indent 4
-  "Default indent level to use in `nand-hdl-mode'"
+  "Default indent level to use inside blocks."
   :group 'nand-hdl
   :type 'integer)
-;;;###autoload(put 'nand-hdl-indent 'safe-local-variable 'integerp)
 
-(defcustom nand-hdl-indent-parts t
-  "If non-nil, indent 'PARTS:', otherwise align with 'CHIP'."
+(defcustom nand-hdl-indent-parts 2
+  "Indentation of 'PARTS' with respect to containing block."
+  :group 'nand-hdl
+  :type 'integer)
+
+(defcustom nand-hdl-indent-declarations 2
+  "Indentation of declarations with respect to containing block."
+  :group 'nand-hdl
+  :type 'integer)
+
+(defcustom nand-hdl-auto-newline t
+  "If non-nil, automatically newline after semicolons."
   :group 'nand-hdl
   :type 'boolean)
+
+;;;###autoload(put 'nand-hdl-indent 'safe-local-variable 'integerp)
+;;;###autoload(put 'nand-hdl-indent-parts 'safe-local-variable 'integerp)
+;;;###autoload(put 'nand-hdl-indent-declarations 'safe-local-variable 'integerp)
 
 (defcustom nand-hdl-highlight-doc t
   "If non-nil, highlight documentation stubs."
@@ -59,7 +90,47 @@
 
 
 ;; ------------------------------------------------------------
-;;* User Functions
+;;* Compilation
+(require 'compile)
+;; compilation-error-regexp-alist-alist
+
+(defvar nand-hdl-error-regexp-alist
+  '((nand-hdl-1
+     "\\(In HDL file \\)\\([^,]+\\),\\s-*Line\\s-*\\([0-9]+\\)" 2 3)
+    (nand-hdl-2
+     "\\(Chip\\)\\s-*\\([^ ]+\\)"
+     (1
+      (progn (concat (file-name-sans-extension buffer-file-name)
+                     ".tst")))
+     nil nil 2)))
+
+(defun nand-hdl-add-compile-regexp ()
+  (interactive)
+  (when (not (assoc 'nand-hdl-1 compilation-error-regexp-alist-alist))
+    (mapcar (lambda (item)
+              (push (car item) compilation-error-regexp-alist)
+              (push item compilation-error-regexp-alist-alist))
+            nand-hdl-error-regexp-alist)))
+(add-hook 'compilation-mode-hook 'nand-hdl-add-compile-regexp)
+
+(defun nand-hdl-compile ()
+  (interactive)
+  (save-buffer)
+  (when (not (file-exists-p nand-hdl-emulator))
+    (user-error "Can't find Hardware emulator: %s"
+                (or nand-hdl-emulator "undefined")))
+  (let* ((test-file
+          (concat
+           (file-name-sans-extension (buffer-file-name)) ".tst"))
+         (compile-command
+          (concat
+           (if (eq system-type 'windows-nt)
+               (concat "cmd.exe /c " nand-hdl-emulator)
+             (concat "bash -c " nand-hdl-emulator))
+           " " test-file))
+         (compilation-read-command))
+   (compile compile-command)))
+
 (defun nand-hdl-run ()
   (interactive))
 
@@ -105,6 +176,14 @@
     ;;  (smie-rule-parent))
     (`(:list-intro . ,(or `"\n" `"" `";")) t)))
 
+;;* Abbrevs
+(defun nand-hdl-define-abbrev (table name expansion &optional hook)
+  (condition-case nil
+      (define-abbrev-table name expansion hook 0 t)
+    (error
+     (define-abbrev-table table name expansion hook))))
+
+
 
 ;; ------------------------------------------------------------
 ;;* Major mode
@@ -121,14 +200,14 @@
 ;; Menu
 (defvar nand-hdl-menu
   '("NandHDL"
-    ["Run" nand-hdl-run :help "Run script"]
+    ["Compile" nand-hdl-compile :help "Compile script"]
     ["Show truth table" nand-hdl-truth :help "Show truth table in other window"]))
 
 ;; Map
 (defvar nand-hdl-mode-map
   (let ((map (make-sparse-keymap)))
     (easy-menu-define nil map nil nand-hdl-menu)
-    (define-key map (kbd "C-c C-c") #'nand-hdl-run)
+    (define-key map (kbd "C-c C-c") #'nand-hdl-compile)
     (define-key map (kbd "C-c C-t") #'nand-hdl-truth)
     map))
 
