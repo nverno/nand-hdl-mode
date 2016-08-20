@@ -244,6 +244,8 @@ run asynchronously.
       (message "Output not created... compiling")
       (nand-hdl-run nil t))))
 
+;; or just diff .out and .cmp file, but for compatibility with
+;; systems with no diff, could add elisp version,
 (defun nand-hdl-highlight-diffs ()
   (interactive)
   (let* ((file (file-name-sans-extension (buffer-file-name)))
@@ -252,6 +254,33 @@ run asynchronously.
     (shell-command-to-string
      (format "diff --unchanged-line-format=\"\" --new-line-format= %s %s"
              "" "%dn" out cmp))))
+
+
+;; ------------------------------------------------------------
+;;* Completion
+
+(defun nand-hdl-vars-before-point ()
+  (save-excursion
+    (let (vin vout)
+      (goto-char (point-min))
+      (forward-comment (point-max))
+      (let* ((in (progn
+                   (re-search-forward "IN" nil t 1)
+                   (match-end 0)))
+             (out (progn
+                    (re-search-forward "OUT" nil t 1)
+                    (match-beginning 0)))
+             (parts (progn
+                      (re-search-forward "PARTS:" nil t 1)
+                      (match-beginning 0))))
+        (goto-char in)
+        (while (re-search-forward "[a-zA-Z]+" out t)
+          (push (match-string-no-properties 0) vin))
+        (goto-char out)
+        (forward-char 3)
+        (while (re-search-forward "[a-zA-Z]+" parts t)
+          (push (match-string-no-properties 0) vout)))
+      `((,vin ,vout)))))
 
 ;;* Abbrevs
 (defun nand-hdl-define-abbrev (table name expansion &optional hook)
@@ -268,8 +297,9 @@ run asynchronously.
 
 (defvar nand-hdl-font-lock-keywords
   `(("\\(?:CHIP\\|BUILTIN\\)\\s-*\\([^ {]+\\)" 1 font-lock-function-name-face)
-    ("\\(?:IN\\|OUT\\)\\s-*\\(.*\\)" 1 font-lock-variable-name-face)
+    ("\\(?:IN\\|OUT\\)\\([^][ ,]+\\)" 1 font-lock-variable-name-face)
     (,(regexp-opt nand-hdl-keywords) . font-lock-builtin-face)
+    ("\\([a-zA-Z0-9]+\\)\\s-*(" 1 font-lock-function-name-face)
     ))
 
 (defun nand-hdl-syntax-propertize-function (start end)
