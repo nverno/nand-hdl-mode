@@ -253,11 +253,16 @@ run asynchronously.
      (format "diff --unchanged-line-format=\"\" --new-line-format= %s %s"
              "" "%dn" out cmp))))
 
+;;* Abbrevs
+(defun nand-hdl-define-abbrev (table name expansion &optional hook)
+  (condition-case nil
+      (define-abbrev-table name expansion hook 0 t)
+    (error
+     (define-abbrev-table table name expansion hook))))
+
 
 ;; ------------------------------------------------------------
-;; Internal
-
-;;* Font-lock
+;;* Font-lock 
 (defconst nand-hdl-keywords
   '("CHIP" "IN" "OUT" "PARTS" "BUILTIN" "CLOCKED"))
 
@@ -282,23 +287,21 @@ run asynchronously.
 (defconst nand-hdl-grammar
   (smie-prec2->grammar
    (smie-precs->prec2
-    '((assoc ",") (assoc " ") (nonassoc ";")))))
+    '((assoc "PARTS" ":") (nonassoc "IN" "OUT") (assoc ",") (assoc ";" "\n")))))
 
 (defun nand-hdl-rules (kind token)
   (pcase (cons kind token)
     (`(:elem . basic) nand-hdl-indent)
-    (`(:elem . args) 0)
-    ;; (`(:before . "{")
-    ;;  (smie-rule-parent))
-    (`(:list-intro . ,(or `"\n" `"" `";")) t)))
-
-;;* Abbrevs
-(defun nand-hdl-define-abbrev (table name expansion &optional hook)
-  (condition-case nil
-      (define-abbrev-table name expansion hook 0 t)
-    (error
-     (define-abbrev-table table name expansion hook))))
-
+    (`(:before . ";")
+     (if (smie-rule-hanging-p) (smie-rule-parent)))
+    (`(:before . ,(or `"IN" `"OUT")) nand-hdl-indent-declarations)
+    (`(:after . ,(or `"IN" `"OUT")) nand-hdl-indent-declarations)
+    (`(:after . "PARTS") nand-hdl-indent-parts)
+    (`(:before . "PARTS") nand-hdl-indent-parts)
+    (`(:before . ":")
+     (if (smie-rule-hanging-p)
+         (- nand-hdl-indent nand-hdl-indent-parts)))
+    (`(:list-intro . ,(or `"\n" `"")) t)))
 
 
 ;; ------------------------------------------------------------
