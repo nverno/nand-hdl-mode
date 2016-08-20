@@ -1,4 +1,4 @@
-;;; nand-hdl-mode --- Major mode for NAND hardward description language files (.hdl)
+;;; nand-hdl-mode --- Major mode for NAND hardward description language files (.hdl) -*- lexical-binding: t -*-
 
 ;; Author: Noah Peart <noah.v.peart@gmail.com>
 ;; URL: https://github.com/nverno/hdl-mode
@@ -30,6 +30,8 @@
 ;; Emac major mode for NAND hardward description language files (.hdl).
 
 ;;; Code:
+(eval-when-compile
+  (require 'cl-lib))
 
 (defgroup nand-hdl nil
   "Major mode for editing NAND hardware description language files."
@@ -38,19 +40,7 @@
 
 (defcustom nand-hdl-directory "nand2tetris"
   "Location of base directory 'nand2tetris', it should contain
-the 'tools' directory."
-  :group 'nand-hdl
-  :type 'file)
-
-(defcustom nand-hdl-emulator
-  (and nand-hdl-directory
-       (concat (expand-file-name
-                (concat "tools/HardwareSimulator"
-                        (if (eq system-type 'windows-nt)
-                            ".bat" ".sh"))
-                nand-hdl-directory)))
-  "Location of 'HardwardSimulator'.  Used to run script and output
-to compilation buffer."
+the 'tools' directory with the hardware simulator, etc."
   :group 'nand-hdl
   :type 'file)
 
@@ -88,54 +78,180 @@ to compilation buffer."
   "Special face to highlight documentation (after '/**')."
   :group 'nand-hdl)
 
+(defcustom nand-hdl-shell
+  (if (eq system-type 'windows-nt) "cmd.exe" "bash")
+  "Shell used to call NAND tools."
+  :group 'nand-hdl
+  :type 'file)
+
+(defcustom nand-hdl-shell-switches
+  (if (eq system-type 'windows-nt) '("/c") '(""))
+  "Switches used with `nand-hdl-shell'."
+  :group 'nand-hdl
+  :type 'listp)
+
+(defvar nand-hdl-output-buffer "*Nand Output*")
+
 
 ;; ------------------------------------------------------------
+;; Internal
+
+(defvar nand-hdl-ext
+  (if (eval-when-compile (eq system-type 'windows-nt))
+      ".bat" ".sh"))
+
+(defun nand-hdl-call (tool &optional call file dest display)
+  (when (not (file-exists-p nand-hdl-directory))
+    (user-error "Can't find NAND root directory: %s"
+                (or nand-hdl-directory "")))
+  (if nand-hdl-directory
+      (let ((tp (expand-file-name (concat "tools/" tool nand-hdl-ext)
+                                  nand-hdl-directory))
+            (switches (mapconcat 'identity nand-hdl-shell-switches " ")))
+        (when (not (file-exists-p tp))
+          (user-error "%s not found at %s" tool tp))
+        (if (and call file)
+            (call-process nand-hdl-shell nil dest display switches tp file)
+         (concat nand-hdl-shell " " switches " " tp)))))
+
+;; ------------------------------------------------------------
 ;;* Compilation
+
 (require 'compile)
-;; compilation-error-regexp-alist-alist
 
 (defvar nand-hdl-error-regexp-alist
   '((nand-hdl-1
-     "\\(In HDL file \\)\\([^,]+\\),\\s-*Line\\s-*\\([0-9]+\\)" 2 3)
+     "In HDL file \\([^,]+\\),\\s-*Line\\s-*\\([0-9]+\\),\\([^:]+\\)" 1 2)
     (nand-hdl-2
-     "\\(Chip\\)\\s-*\\([^ ]+\\)"
-     (1
-      (progn (concat (file-name-sans-extension buffer-file-name)
-                     ".tst")))
-     nil nil 2)))
+     "\\(Chip\\)\\s-*\\([^ ]+\\).* load \\(.*\\)" 3 0 0 2 2 (2 compilation-error-face))
+    (nand-hdl-3
+      "\\(Comparison\\) failure at [lL]ine \\([0-9]+\\)" 1 2 nil 2)
+    ))
+
+;; debug
+(defun nand-hdl-replace-compile-regexp ()
+  (interactive)
+  (mapcar (lambda (item)
+            (cl-delete item compilation-error-regexp-alist-alist
+                       :test (lambda (x y) (eq (car x) (car y))))
+            (push item compilation-error-regexp-alist-alist))
+          nand-hdl-error-regexp-alist))
+
+;; Hack to find associated files from compilation buffer when the emulator
+;; doesn't specify a filename
+(defun nand-hdl-process-setup ()
+  (let ((file (file-name-sans-extension (buffer-file-name))))
+    (dolist (x '("tst" "out" "hdl" "cmp"))
+      (setenv (concat x "-file") (concat file "." x)))))
+
+(defun nand-hdl-parse-errors-filename (filename)
+  (cond
+   ((string= filename "Comparison")
+    (getenv "out-file"))
+   (t (getenv "hdl-file"))))
 
 (defun nand-hdl-add-compile-regexp ()
   (interactive)
-  (when (not (assoc 'nand-hdl-1 compilation-error-regexp-alist-alist))
+  (when (not (assoc 'nand-hdl-3 compilation-error-regexp-alist-alist))
     (mapcar (lambda (item)
               (push (car item) compilation-error-regexp-alist)
               (push item compilation-error-regexp-alist-alist))
             nand-hdl-error-regexp-alist)))
 (add-hook 'compilation-mode-hook 'nand-hdl-add-compile-regexp)
 
-(defun nand-hdl-compile ()
+;; @@FIXME: Jump to missing line of chip? Line number not given in output
+;; (defun nand-hdl-error-line ()
+;;   (compilation-parse-errors
+;;    (match-beginning 0)
+;;    (line-end-position)
+;;    ("Chip\\s-*\\([^]+\\)")
+;;    (let ((buff (find-file-noselect (expand-file-name file dir))))
+;;      (with-current-buffer buff
+;;        (goto-char (point-min))
+;;        (re-search-forward (regexp-quote (match-string-no-properties 1)) nil t 1)
+;;        (match-beginning 0)))))
+
+;; ------------------------------------------------------------
+;;* User Functions
+
+(defun nand-hdl-run (&optional silent compile wait)
+  "Run chip in simulator and display output:
+1. By default in `nand-hdl-output-buffer'
+2. If SILENT is non-nil just run without displaying output, if WAIT is 0
+run asynchronously.
+3. If COMPILE is non-nil in compilation buffer."
   (interactive)
   (save-buffer)
-  (when (not (file-exists-p nand-hdl-emulator))
-    (user-error "Can't find Hardware emulator: %s"
-                (or nand-hdl-emulator "undefined")))
-  (let* ((test-file
-          (concat
-           (file-name-sans-extension (buffer-file-name)) ".tst"))
-         (compile-command
-          (concat
-           (if (eq system-type 'windows-nt)
-               (concat "cmd.exe /c " nand-hdl-emulator)
-             (concat "bash -c " nand-hdl-emulator))
-           " " test-file))
-         (compilation-read-command))
-   (compile compile-command)))
+  (let ((sim "HardwareSimulator"))
+    (nand-hdl-process-setup)
+    (let* ((file (file-name-sans-extension (buffer-file-name)))
+           (test-file (concat file ".tst")))
+      (if compile
+          (let ((compilation-read-command)
+                (compile-command (concat (nand-hdl-call sim) " " test-file))
+                ;; Allow handling jumping to .out and .cmp files when the emulator
+                ;; doesn't specify any filenames in the output
+                (compilation-process-setup-function
+                 #'(lambda () (setq-local compilation-parse-errors-filename-function
+                                     'nand-hdl-parse-errors-filename))))
+            (compile compile-command))
+        (if silent (nand-hdl-call sim t test-file wait)
+          (nand-hdl-call sim t test-file nand-hdl-output-buffer t)
+          (pop-to-buffer nand-hdl-output-buffer))))))
 
-(defun nand-hdl-run ()
-  (interactive))
+(defun nand-hdl-compile ()
+  "Run chip in simulator and output to compilation buffer."
+  (interactive)
+  (nand-hdl-run nil t))
 
-(defun nand-hdl-truth ()
-  (interactive))
+(defun nand-hdl-expected ()
+  "Show the truth table (.cmp) file for this chip in another window."
+  (interactive)
+  (let ((file (file-name-sans-extension (buffer-file-name))))
+    (find-file-other-window (expand-file-name (concat file ".cmp") file))))
+
+(defun nand-hdl-output ()
+  "Show the output of previous run for this chip."
+  (interactive)
+  (let* ((file (file-name-sans-extension (buffer-file-name)))
+         (out (expand-file-name (concat file ".out") file)))
+    (unless (file-exists-p out)
+      (user-error "File %s doesn't exist, has it been run?" out))
+    (find-file-other-window out)))
+
+(defun nand-hdl-compare (&optional run-first)
+  "Show comparison between output and expected results in other window."
+  (interactive "P")
+  (let* ((buff (get-buffer-create nand-hdl-output-buffer))
+         (inhibit-read-only t)
+         (file (file-name-sans-extension (buffer-file-name)))
+         (cmp (expand-file-name (concat file ".cmp") file))
+         (out (expand-file-name (concat file ".out") file))
+         (run-first (or run-first
+                        current-prefix-arg
+                        (not (file-exists-p out)))))
+    (when run-first (nand-hdl-run t))
+    (if (and (file-exists-p cmp) (file-exists-p out))
+        (progn
+          (with-current-buffer buff
+           (erase-buffer)
+           (insert "Expected:\n")
+           (insert-file-contents cmp)
+           (goto-char (point-max))
+           (insert "\n\nOutput:\n")
+           (insert-file-contents out))
+          (pop-to-buffer buff))
+      (message "Output not created... compiling")
+      (nand-hdl-run nil t))))
+
+(defun nand-hdl-highlight-diffs ()
+  (interactive)
+  (let* ((file (file-name-sans-extension (buffer-file-name)))
+         (out (expand-file-name (concat file ".out") file))
+         (cmp (expand-file-name (concat file ".cmp") file)))
+    (shell-command-to-string
+     (format "diff --unchanged-line-format=\"\" --new-line-format= %s %s"
+             "" "%dn" out cmp))))
 
 
 ;; ------------------------------------------------------------
@@ -200,15 +316,22 @@ to compilation buffer."
 ;; Menu
 (defvar nand-hdl-menu
   '("NandHDL"
-    ["Compile" nand-hdl-compile :help "Compile script"]
-    ["Show truth table" nand-hdl-truth :help "Show truth table in other window"]))
+    ["Compile" nand-hdl-compile :help "Run with output to compilation buffer"]
+    ["Compare" nand-hdl-compare
+     :help "Compare output to expected (run first if required)"]
+    ["Run" nand-hdl-run :help "Run with output to buffer"]
+    ["Show Expected" nand-hdl-expected :help "Show truth table in other window"]
+    ["Show Output" nand-hdl-output :help "Show output from run"]))
 
 ;; Map
 (defvar nand-hdl-mode-map
   (let ((map (make-sparse-keymap)))
     (easy-menu-define nil map nil nand-hdl-menu)
-    (define-key map (kbd "C-c C-c") #'nand-hdl-compile)
-    (define-key map (kbd "C-c C-t") #'nand-hdl-truth)
+    (define-key map (kbd "<f5>")    #'nand-hdl-compile)
+    (define-key map (kbd "C-c C-e") #'nand-hdl-expected)
+    (define-key map (kbd "C-c C-c") #'nand-hdl-compare)
+    (define-key map (kbd "C-c C-o") #'nand-hdl-output)
+    (define-key map (kbd "C-c C-r") #'nand-hdl-run)
     map))
 
 ;;;###autoload
@@ -222,7 +345,8 @@ to compilation buffer."
               `(nand-hdl-font-lock-keywords nil nil nil))
   ;; (setq-local syntax-propertize-function nand-hdl-syntax-propertize)
   (setq-local imenu-generic-expression
-              '((nil "^\\(?:CHIP\\|BUILTIN\\)\\s-*\\([^ {]+\\)" 1)))
+              '((nil "^\\(?:CHIP\\|BUILTIN\\)\\s-*\\([^ {]+\\)" 1)
+                (nil "\\(PARTS\\):" 1)))
   (setq-local outline-regexp "^\\(?:CHIP\\|BUILTIN\\)")
   (smie-setup nand-hdl-grammar #'nand-hdl-rules
               :forward-token #'smie-default-forward-token
