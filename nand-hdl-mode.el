@@ -41,7 +41,8 @@
 ;; - imenu, other user functions, etc.
 ;; - Autocompletion / dropdown help using `company-nand' with
 ;;   `company-mode' and `company-quickhelp'
-;;
+;; - snippets to fill in chip components
+
 ;; Tools in build directory:
 ;; - Autogenerate snippets from the HDL survival website (for use with yasnippet)
 ;; - Autogenerate docs.txt from builtin chips.
@@ -54,7 +55,8 @@
 ;;
 ;; Require this file or autoload mode / compile.
 ;; Snippets can be enabled by simply enabling `yas-minor-mode' in
-;; `nand-hdl-mode-hook'.
+;; `nand-hdl-mode-hook' and loading the `nand-hdl-snippet-dir' with
+;; `yas-load-directory'.
 ;;
 ;; The variable `nand-hdl-directory' needs to be set to point to
 ;; the installation directory of nand2tetris, ie the directory
@@ -389,7 +391,7 @@ run asynchronously.
   (when (and (bound-and-true-p yas-minor-mode)
              (file-exists-p nand-hdl-snippet-dir))
     (yas-load-directory nand-hdl-snippet-dir)))
-(eval-after-load "nand-hdl-mode" '(nand-hdl-maybe-load-snippets))
+(eval-after-load "yas-minor-mode" '(nand-hdl-maybe-load-snippets))
 
 
 ;; ------------------------------------------------------------
