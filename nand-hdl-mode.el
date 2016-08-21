@@ -384,6 +384,12 @@ run asynchronously.
     (error
      (define-abbrev-table table name expansion hook))))
 
+(defun nand-hdl-maybe-load-snippets ()
+  (when (and (bound-and-true-p yas-minor-mode)
+             (file-exists-p nand-hdl-snippet-dir))
+    (yas-load-directory nand-hdl-snippet-dir)))
+(add-hook 'nand-hdl-mode-hook 'nand-hdl-maybe-load-snippets)
+
 
 ;; ------------------------------------------------------------
 ;;* Major mode
@@ -435,10 +441,7 @@ run asynchronously.
   (setq-local outline-regexp "^\\(?:CHIP\\|BUILTIN\\)")
   (smie-setup nand-hdl-grammar #'nand-hdl-rules
               :forward-token #'smie-default-forward-token
-              :backward-token #'smie-default-backward-token)
-  (when (and (bound-and-true-p yas-minor-mode)
-             (file-exists-p nand-hdl-snippet-dir))
-    (yas-load-directory nand-hdl-snippet-dir)))
+              :backward-token #'smie-default-backward-token))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hdl\\'" . nand-hdl-mode))
