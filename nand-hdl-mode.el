@@ -384,11 +384,12 @@ run asynchronously.
     (error
      (define-abbrev-table table name expansion hook))))
 
+;;* snippets
 (defun nand-hdl-maybe-load-snippets ()
   (when (and (bound-and-true-p yas-minor-mode)
              (file-exists-p nand-hdl-snippet-dir))
     (yas-load-directory nand-hdl-snippet-dir)))
-(add-hook 'nand-hdl-mode-hook 'nand-hdl-maybe-load-snippets)
+(eval-after-load "nand-hdl-mode" '(nand-hdl-maybe-load-snippets))
 
 
 ;; ------------------------------------------------------------
