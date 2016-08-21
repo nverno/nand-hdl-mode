@@ -27,7 +27,9 @@
 
 ;;; Description:
 
-;; Emac major mode for NAND hardward description language files (.hdl).
+;; Emac major mode for NAND hardward description language files (.hdl) as 
+;; defined by the coursera class nand2tetris.
+;; This mode 
 
 ;;; Code:
 (eval-when-compile
@@ -246,19 +248,20 @@ run asynchronously.
 
 ;; or just diff .out and .cmp file, but for compatibility with
 ;; systems with no diff, could add elisp version,
-(defun nand-hdl-highlight-diffs ()
-  (interactive)
-  (let* ((file (file-name-sans-extension (buffer-file-name)))
-         (out (expand-file-name (concat file ".out") file))
-         (cmp (expand-file-name (concat file ".cmp") file)))
-    (shell-command-to-string
-     (format "diff --unchanged-line-format=\"\" --new-line-format= %s %s"
-             "" "%dn" out cmp))))
+;; (defun nand-hdl-highlight-diffs ()
+;;   (interactive)
+;;   (let* ((file (file-name-sans-extension (buffer-file-name)))
+;;          (out (expand-file-name (concat file ".out") file))
+;;          (cmp (expand-file-name (concat file ".cmp") file)))
+;;     (shell-command-to-string
+;;      (format "diff --unchanged-line-format=\"\" --new-line-format= %s %s"
+;;              "" "%dn" out cmp))))
 
 
 ;; ------------------------------------------------------------
 ;;* Completion
 
+;; 
 (defun nand-hdl-vars-before-point ()
   (save-excursion
     (let (vin vout)
@@ -296,16 +299,16 @@ run asynchronously.
   '("CHIP" "IN" "OUT" "PARTS" "BUILTIN" "CLOCKED"))
 
 (defvar nand-hdl-font-lock-keywords
-  `(("\\(?:CHIP\\|BUILTIN\\)\\s-*\\([^ {]+\\)" 1 font-lock-function-name-face)
+  `(("\\(?:CHIP\\|BUILTIN\\)\\s-*\\([A-Za-z0-9]+\\)" 1 font-lock-function-name-face)
     ("\\(?:IN\\|OUT\\)\\([^][ ,]+\\)" 1 font-lock-variable-name-face)
     (,(regexp-opt nand-hdl-keywords) . font-lock-builtin-face)
     ("\\([a-zA-Z0-9]+\\)\\s-*(" 1 font-lock-function-name-face)
     ))
 
-(defun nand-hdl-syntax-propertize-function (start end)
-  (goto-char start)
-  ;; ("\\(?:/\\*\\*\\([^\\(?:*/)]+\\)\\)" 1 'nand-hdl-doc-face)
-  )
+;; (defun nand-hdl-syntax-propertize-function (start end)
+;;   (goto-char start)
+;; ("\\(?:/\\*\\*\\([^\\(?:*/)]+\\)\\)" 1 'nand-hdl-doc-face)
+;; )
 ;; (defconst nand-hdl-syntax-propertize nil)
 ;; (eval-and-compile
 ;;   (defconst nand-hdl-doc-re
@@ -372,6 +375,7 @@ run asynchronously.
   "Major mode for editing NAND hardware description files (.hdl).\n
 \\{nand-hdl-mode-map}"
   (setq-local comment-start "// ")
+  (setq-local comment-end "")
   (setq-local comment-start-skip "\\(//+\\|/\\*+\\)\\s *")
   (setq-local font-lock-defaults
               `(nand-hdl-font-lock-keywords nil nil nil))
@@ -382,9 +386,7 @@ run asynchronously.
   (setq-local outline-regexp "^\\(?:CHIP\\|BUILTIN\\)")
   (smie-setup nand-hdl-grammar #'nand-hdl-rules
               :forward-token #'smie-default-forward-token
-              :backward-token #'smie-default-backward-token)
-  (when (bound-and-true-p yas-minor-mode)
-    (yas-load-directory "snippets")))
+              :backward-token #'smie-default-backward-token))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hdl\\'" . nand-hdl-mode))

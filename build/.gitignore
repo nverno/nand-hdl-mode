@@ -1,0 +1,7 @@
+*
+!docs.c
+!.gitignore
+!provision.sh
+!hdl-make-snippets.py
+!Makefile
+!README.md

@@ -14,6 +14,16 @@ files=("http://nand2tetris.org/tutorials/PDF/Hardware%20Simulator%20Tutorial.pdf
 # repos
 declare -A repos=()
 
+# get software suite
+nand_bundle="http://nand2tetris.org/software/nand2tetris.zip"
+get_nand_bundle () {
+    if [ ! -d "nand2tetris" ]; then
+        wget $nand_bundle
+        7za x -tzip "nand2tetris.zip"
+        rm nand2tetris.zip
+    fi
+}
+
 # get files
 get_resource_files () {
     for f in ${files[@]}; do
@@ -39,6 +49,7 @@ get_resource_repos () {
 # ------------------------------------------------------------
 # get stuff
 
+get_nand_bundle
 # get_resource_files
 get_resource_repos
 
