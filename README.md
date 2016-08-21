@@ -29,6 +29,8 @@ Todo:
 
 Require this file or autoload mode / compile.  Add snippets if using yasnippet.
 
+![example](example.png)
+
 
 ---
 Converted from `nand-hdl-mode.el` by [*el2markdown*](https://github.com/Lindydancer/el2markdown).

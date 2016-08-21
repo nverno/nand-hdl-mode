@@ -53,6 +53,9 @@
 ;;
 ;; Require this file or autoload mode / compile.  Add snippets if using yasnippet.
 
+;;
+;; ![example](example.png)
+
 ;;; Code:
 (eval-when-compile
   (require 'cl-lib))
