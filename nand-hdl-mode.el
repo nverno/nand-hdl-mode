@@ -39,6 +39,8 @@
 ;;   in .out file.
 ;; - Comparison buffer for expected vs. output. (`C-c C-c`)
 ;; - imenu, other user functions, etc.
+;; - Autocompletion / dropdown help using `company-nand' with
+;;   `company-mode' and `company-quickhelp'
 ;;
 ;; Tools in build directory:
 ;; - Autogenerate snippets from the HDL survival website (for use with yasnippet)
@@ -46,13 +48,21 @@
 ;;
 ;; Todo:
 ;; - Completion-at-point functions.
-;; - Use docs to provide `company-quickhelp' support.
 ;; - Jump to definitions
 ;;
 ;;; Installation:
 ;;
-;; Require this file or autoload mode / compile.  Add snippets if using yasnippet.
-
+;; Require this file or autoload mode / compile.
+;; Snippets can be enabled by simply enabling `yas-minor-mode' in
+;; `nand-hdl-mode-hook'.
+;;
+;; ```lisp
+;; ;; Example
+;; (require 'nand-hdl-mode)
+;; (add-hook 'nand-hdl-mode-hook 'yas-minor-mode)
+;; ```
+;;
+;; See `company-nand' for autocompletion setup.
 ;;
 ;; ![example](example.png)
 
@@ -116,6 +126,12 @@ the 'tools' directory with the hardware simulator, etc."
   "Switches used with `nand-hdl-shell'."
   :group 'nand-hdl
   :type 'listp)
+
+(defvar nand-hdl-snippet-dir nil)
+(setq nand-hdl-snippet-dir
+      (when load-file-name
+        (expand-file-name "snippets" (file-name-directory
+                                      load-file-name))))
 
 (defvar nand-hdl-output-buffer "*Nand Output*")
 
@@ -310,13 +326,6 @@ run asynchronously.
           (push (match-string-no-properties 0) vout)))
       `((,vin ,vout)))))
 
-;;* Abbrevs
-(defun nand-hdl-define-abbrev (table name expansion &optional hook)
-  (condition-case nil
-      (define-abbrev-table name expansion hook 0 t)
-    (error
-     (define-abbrev-table table name expansion hook))))
-
 
 ;; ------------------------------------------------------------
 ;;* Font-lock 
@@ -361,6 +370,14 @@ run asynchronously.
          (- nand-hdl-indent nand-hdl-indent-parts)))
     (`(:list-intro . ,(or `"\n" `"")) t)))
 
+;; ------------------------------------------------------------
+;;* Abbrevs
+(defun nand-hdl-define-abbrev (table name expansion &optional hook)
+  (condition-case nil
+      (define-abbrev-table name expansion hook 0 t)
+    (error
+     (define-abbrev-table table name expansion hook))))
+
 
 ;; ------------------------------------------------------------
 ;;* Major mode
@@ -371,6 +388,7 @@ run asynchronously.
     (modify-syntax-entry ?\* ". 23" st)
     (modify-syntax-entry ?/ ". 124b" st)
     (modify-syntax-entry ?\n "> b" st)
+    (modify-syntax-entry ?= "." st)
     st)
   "Sytax for `nand-hdl-mode'")
 
@@ -411,7 +429,10 @@ run asynchronously.
   (setq-local outline-regexp "^\\(?:CHIP\\|BUILTIN\\)")
   (smie-setup nand-hdl-grammar #'nand-hdl-rules
               :forward-token #'smie-default-forward-token
-              :backward-token #'smie-default-backward-token))
+              :backward-token #'smie-default-backward-token)
+  (when (and (bound-and-true-p yas-minor-mode)
+             (file-exists-p nand-hdl-snippet-dir))
+    (yas-load-directory nand-hdl-snippet-dir)))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hdl\\'" . nand-hdl-mode))

@@ -11,14 +11,18 @@ ifeq ($(OS), Windows_NT)
 endif
 
 docs=docs$(ext)
+nand= nand2tetris
 
 .PHONY: clean all
 all: $(docs) run
 
-run:
+run: $(builtins)
 	mv $(docs) $(builtins)
 	cd $(builtins) && ./$(docs) $(hdl)
 	mv $(builtins)/docs.txt ..
+
+$(builtins) :
+	./provision.sh
 
 $(docs) : docs.c
 	$(cc) $< -o $@

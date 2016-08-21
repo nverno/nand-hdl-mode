@@ -1,4 +1,3 @@
-;;; Generated from build/docs.exe -*- coding: utf-8 -*-
 (("Not16" . "16-bit Not gate: for i = 0..15: out[i] = not in[i]")("Or16" . "16-bit bitwise Or gate: for i = 0..15 out[i] = a[i] or b[i].")("DMux" . " Dmultiplexor.  
   {a,b} = {in,0} if sel == 0
           {0,in} if sel == 1")("RAM8" . "Memory of 8 registers, each 16-bit wide.  
@@ -18,7 +17,7 @@
   showing an array-like component that displays the ROM's 
   contents. The ROM32K chip is supposed to be pre-loaded with 
   a machine language program. To that end, the built-in chip
-  implementation also knows how to handle the "ROM32K load Xxx"
+  implementation also knows how to handle the \"ROM32K load Xxx\"
   script command, where Xxx is the name of a text file containing 
   a program written in the Hack machine language.  When the 
   simulator encounters such a command in a test script, the code 
@@ -47,20 +46,20 @@
   {a,b,c,d} = {in,0,0,0} if sel == 00
               {0,in,0,0} if sel == 01
               {0,0,in,0} if sel == 10
-              {0,0,0,in} if sel == 11")("ARegister" . "A 16-Bit register called "A Register". 
+              {0,0,0,in} if sel == 11")("ARegister" . "A 16-Bit register called \"A Register\". 
   If load[t-1]=1 then out[t] = in[t-1]
   else out does not change (out[t] = out[t-1])
  
   This built-in chip implementation has the side effect of 
   providing a GUI representation of a 16-bit register
-  called "A register" (typically used to store an address).")("Xor" . " Exclusive-or gate: out = !(a == b).")("Add16")("DFF" . "Data Flip-flop: out(t) = in(t-1) 
-  where t is the current time unit, or clock cycle.")("DRegister" . "A 16-Bit register called "D Register". 
+  called \"A register\" (typically used to store an address).")("Xor" . " Exclusive-or gate: out = !(a == b).")("Add16")("DFF" . "Data Flip-flop: out(t) = in(t-1) 
+  where t is the current time unit, or clock cycle.")("DRegister" . "A 16-Bit register called \"D Register\". 
   If load[t-1]=1 then out[t] = in[t-1]
   else out does not change (out[t] = out[t-1])
  
   This built-in chip implementation has the side effect of 
   providing a GUI representation of a 16-bit register
-  called "D register" (typically used to store data).")("And" . "And gate: out = 1 if {a == 1 and b == 1}, 0 otherwise  ")("DMux8Way" . " 8-way demultiplexor.  
+  called \"D register\" (typically used to store data).")("And" . "And gate: out = 1 if {a == 1 and b == 1}, 0 otherwise  ")("DMux8Way" . " 8-way demultiplexor.  
   {a,b,c,d,e,f,g,h} = {in,0,0,0,0,0,0,0} if sel == 000
                       {0,in,0,0,0,0,0,0} if sel == 001
                       etc.
@@ -92,7 +91,7 @@
   x+1, y+1, x-1, y-1, x&y, x|y on two 16-bit inputs.
   Which function to compute is determined by 6 input bits 
   denoted zx, nx, zy, ny, f, no.
-  The computed function's value is called "out".
+  The computed function's value is called \"out\".
   In addition to computing out, the ALU computes two 
   1-bit outputs called zr and ng:
   if out == 0, zr = 1; otherwise zr = 0;

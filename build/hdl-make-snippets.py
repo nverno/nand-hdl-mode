@@ -20,7 +20,7 @@ class HdlApi:
 
     def __init__(self, url):
         self.soup = None
-
+        self.sigs = []
         try:
             html = urllib.urlopen(url).read()
             self.soup = BeautifulSoup(html)
@@ -33,10 +33,19 @@ class HdlApi:
             api = self.soup.findAll('pre')[-1].get_text()
             for i in api.split('\n'):
                 if len(i):
-                    write_snippet(i.strip())
+                    line = i.strip()
+                    # write_snippet(line)
+                    self.sigs.append((line[:line.index('(')], line))
         except:
             print "Failed to get api"
 
+    def write_sigs(self):
+        with open("signatures.txt", "w") as f:
+            f.write("(")
+            for a, b in self.sigs:
+                f.write("(\"%s\" . \"%s\")" % (a, b.replace(";", "")))
+            f.write(")")
+            
 
 def make_snippet(line):
     ints = iter(range(1, line.count(' ') + 1))
@@ -55,11 +64,16 @@ def write_snippet(line):
     with open(name, "w") as f:
         f.write(res)
 
+h = HdlApi("http://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
 
 if __name__ == '__main__':
     import os
+    h = HdlApi("http://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
+    # store signatures to annotate company completions as well
+    # avoids needing to use company-yasnippet instead
+    h.write_sigs()
+
+    # make snippets
     os.mkdir("nand-hdl-mode")
     os.chdir("nand-hdl-mode")
-
-    h = HdlApi("http://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
     h.get_api()

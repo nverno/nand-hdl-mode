@@ -8,7 +8,7 @@ enum STATE { IN, OUT };
 int main(int argc, char *argv[]) {
   
   FILE* ofp = fopen("docs.txt", "w");
-  fprintf(ofp, ";;; Generated from build/docs.exe -*- coding: utf-8 -*-\n(");
+  putc('(', ofp);
   
   while (--argc > 0) {
     FILE* f = fopen(*++argv, "r");
@@ -30,8 +30,11 @@ int main(int argc, char *argv[]) {
           state = IN;
         }
       }
-      if (state == IN)
+      if (state == IN) {
+        if (c == '"')  // fix quotes
+          putc('\\', ofp); 
         putc(c, ofp);
+      }
     }
     putc(')', ofp);
     fclose(f);
