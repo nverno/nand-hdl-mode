@@ -371,9 +371,8 @@ run asynchronously.
 (define-derived-mode nand-hdl-mode prog-mode "NandHDL"
   "Major mode for editing NAND hardware description files (.hdl).\n
 \\{nand-hdl-mode-map}"
-  (setq-local comment-start "/* ")
+  (setq-local comment-start "// ")
   (setq-local comment-start-skip "\\(//+\\|/\\*+\\)\\s *")
-  (setq-local comment-end " */")
   (setq-local font-lock-defaults
               `(nand-hdl-font-lock-keywords nil nil nil))
   ;; (setq-local syntax-propertize-function nand-hdl-syntax-propertize)
@@ -383,7 +382,9 @@ run asynchronously.
   (setq-local outline-regexp "^\\(?:CHIP\\|BUILTIN\\)")
   (smie-setup nand-hdl-grammar #'nand-hdl-rules
               :forward-token #'smie-default-forward-token
-              :backward-token #'smie-default-backward-token))
+              :backward-token #'smie-default-backward-token)
+  (when (bound-and-true-p yas-minor-mode)
+    (yas-load-directory "snippets")))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hdl\\'" . nand-hdl-mode))
