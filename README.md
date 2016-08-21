@@ -15,6 +15,8 @@ defined by the coursera class nand2tetris.
   in .out file.
 - Comparison buffer for expected vs. output. (`C-c C-c`)
 - imenu, other user functions, etc.
+- Autocompletion / dropdown help using `company-nand` with
+  `company-mode` and `company-quickhelp`
 
 Tools in build directory:
 - Autogenerate snippets from the HDL survival website (for use with yasnippet)
@@ -22,12 +24,25 @@ Tools in build directory:
 
 Todo:
 - Completion-at-point functions.
-- Use docs to provide `company-quickhelp` support.
 - Jump to definitions
 
 ### Installation
 
-Require this file or autoload mode / compile.  Add snippets if using yasnippet.
+Require this file or autoload mode / compile.
+Snippets can be enabled by simply enabling `yas-minor-mode` in
+`nand-hdl-mode-hook`.
+
+The variable `nand-hdl-directory` needs to be set to point to
+the installation directory of nand2tetris, ie the directory
+containing 'tools' and 'projects' directories.
+
+```lisp
+;; Example
+(require 'nand-hdl-mode)
+(add-hook 'nand-hdl-mode-hook 'yas-minor-mode)
+```
+
+See `company-nand` for autocompletion setup.
 
 ![example](example.png)
 

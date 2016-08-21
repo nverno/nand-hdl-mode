@@ -56,6 +56,10 @@
 ;; Snippets can be enabled by simply enabling `yas-minor-mode' in
 ;; `nand-hdl-mode-hook'.
 ;;
+;; The variable `nand-hdl-directory' needs to be set to point to
+;; the installation directory of nand2tetris, ie the directory
+;; containing 'tools' and 'projects' directories.
+;;
 ;; ```lisp
 ;; ;; Example
 ;; (require 'nand-hdl-mode)
