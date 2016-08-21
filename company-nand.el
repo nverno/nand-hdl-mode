@@ -43,7 +43,7 @@
   :type 'sexp)
 
 (defvar company-nand-info--dir nil)
-(setq company-nand-info-dir
+(setq company-nand-info--dir
       (when load-file-name
         (expand-file-name "info" (file-name-directory load-file-name))))
 
@@ -134,7 +134,7 @@ annotation instead (default '<Builtin>')."
   "Company backend for NAND hardware description language files."
   (interactive (list 'interactive))
   (cl-case command
-    (interactive (comany-begin-backend 'company-nand))
+    (interactive (company-begin-backend 'company-nand))
     (prefix (company-nand-prefix))
     (annotation (company-nand-annotation arg))
     (meta (company-nand-meta arg))

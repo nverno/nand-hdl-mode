@@ -138,6 +138,8 @@ the 'tools' directory with the hardware simulator, etc."
 
 ;; ------------------------------------------------------------
 ;; Internal
+;; silence byte-compiler
+(defvar yas-load-directory)
 
 (defvar nand-hdl-ext
   (if (eval-when-compile (eq system-type 'windows-nt))
