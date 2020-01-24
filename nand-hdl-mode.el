@@ -343,6 +343,7 @@ run asynchronously.
 (defvar nand-hdl-font-lock-keywords
   `(("\\(?:CHIP\\|BUILTIN\\)\\s-*\\([A-Za-z0-9]+\\)" 1 font-lock-function-name-face)
     ("\\(?:IN\\|OUT\\)\\([^][ ,]+\\)" 1 font-lock-variable-name-face)
+    (,(regexp-opt '("false" "true") t) . font-lock-constant-face)
     (,(regexp-opt nand-hdl-keywords) . font-lock-builtin-face)
     ("\\([a-zA-Z0-9]+\\)\\s-*(" 1 font-lock-function-name-face)
     ))
