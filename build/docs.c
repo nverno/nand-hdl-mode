@@ -7,12 +7,13 @@ enum STATE { IN, OUT };
 
 int main(int argc, char *argv[]) {
   
-  FILE* ofp = fopen("docs.txt", "w");
+  FILE* ofp = fopen(*++argv, "w");
+  --argc;
   putc('(', ofp);
   
   while (--argc > 0) {
     FILE* f = fopen(*++argv, "r");
-    fprintf(ofp, "(\"%.*s\" .", strlen(*argv)-4, *argv);
+    fprintf(ofp, "(\"%.*s\" .", (int)strlen(*argv)-4, *argv);
     int c, state = OUT;
   
     while ((c = getc(f)) != EOF) {

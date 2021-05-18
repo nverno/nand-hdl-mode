@@ -1,31 +1,36 @@
-cc ?= g++
-
-loc=$(abspath .)
-builtins= nand2tetris/tools/builtInChips
-hdl=$(shell basename -a $(wildcard $(builtins)/*.hdl))
-ext=
+CC       ?= g++
+#$(CURDIR)/nand2tetris
+NANDDIR  ?= ~/projects/nand2tetris
+OUTFILE  ?= $(CURDIR)/docs.txt
+LOC      =  $(CURDIR)
+BUILTINS =  ${NANDDIR}/tools/builtInChips
+EXT      =  
 
 ifeq ($(OS), Windows_NT)
-  ext=.exe
-  loc:=$(shell cygpath -a $(loc))
+  EXT  = .exe
+  LOC := $(shell cygpath -a $(LOC))
 endif
 
-docs=docs$(ext)
-nand= nand2tetris
+ifeq ("$(wildcard $(NANDDIR))", "")
+  $(error "Nand directory: $(NANDDIR) not found")
+endif
+
+DOCS =  $(CURDIR)/docs$(EXT)
+HDL  := $(notdir $(wildcard $(BUILTINS)/*.hdl))
 
 .PHONY: clean all
-all: $(docs) run
+all: $(DOCS) run
 
-run: $(builtins)
-	mv $(docs) $(builtins)
-	cd $(builtins) && ./$(docs) $(hdl)
-	mv $(builtins)/docs.txt ..
+run: $(BUILTINS) $(DOCS)
+	cd $(BUILTINS) && \
+		$(DOCS) $(OUTFILE) $(HDL)
 
-$(builtins) :
+$(BUILTINS):
 	./provision.sh
 
-$(docs) : docs.c
-	$(cc) $< -o $@
+.INTERMEDIATE: $(DOCS)
+$(DOCS): docs.c
+	$(CC) $< -o $@
 
 clean:
 	$(RM) *.exe *~ *.out

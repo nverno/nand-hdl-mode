@@ -3,6 +3,8 @@
 """
 Convert HDL API from http://www.nand2tetris.org/software/HDL%20Survival%20Guide.html
 to snippets for emacs.
+
+FIXME (5/18/21): this page doesn't seem to have any of the API anymore
 """
 
 import sys
@@ -37,7 +39,7 @@ class HdlApi:
                     # write_snippet(line)
                     self.sigs.append((line[:line.index('(')], line))
         except:
-            print "Failed to get api"
+            print("Failed to get api")
 
     def write_sigs(self):
         with open("signatures.txt", "w") as f:
@@ -64,11 +66,11 @@ def write_snippet(line):
     with open(name, "w") as f:
         f.write(res)
 
-h = HdlApi("http://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
+# h = HdlApi("https://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
 
 if __name__ == '__main__':
     import os
-    h = HdlApi("http://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
+    h = HdlApi("https://www.nand2tetris.org/software/HDL%20Survival%20Guide.html")
     # store signatures to annotate company completions as well
     # avoids needing to use company-yasnippet instead
     h.write_sigs()

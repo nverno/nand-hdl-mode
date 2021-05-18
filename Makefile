@@ -1,44 +1,44 @@
-emacs ?= emacs
-wget ?= wget
+EMACS    ?= emacs
+WGET     ?= wget
+ELPA_DIR ?= ~/.emacs.d/elpa
+AUTO     ?= nand-hdl-mode-autoloads.el
 
-elpa_dir ?= ~/.emacs.d/elpa
-auto ?= nand-hdl-mode-autoloads.el
-
-el = $(filter-out $(auto) .dir-locals.el,$(wildcard *.el))
+el  = $(filter-out $(AUTO) .dir-locals.el,$(wildcard *.el))
 elc = $(el:.el=.elc)
 
-batch_flags = -batch \
+BATCH_FLAGS = -batch                                       \
 	--eval "(let ((default-directory                   \
-                      (expand-file-name \"$(elpa_dir)\"))) \
+                      (expand-file-name \"$(ELPA_DIR)\"))) \
                   (normal-top-level-add-subdirs-to-load-path))"
 
-auto_flags ?= \
-	--eval "(let ((generated-autoload-file                       \
-                      (expand-file-name (unmsys--file-name \"$@\"))) \
-                      (wd (expand-file-name default-directory))      \
-                      (backup-inhibited t)                           \
-                      (default-directory                             \
-	                (expand-file-name \"$(elpa_dir)\")))         \
-                   (normal-top-level-add-subdirs-to-load-path)       \
-                   (update-directory-autoloads wd))"
+AUTO_FLAGS ?=                                                          \
+	--eval "(progn (defvar generated-autoload-file nil)            \
+		  (let ((generated-autoload-file                       \
+			(expand-file-name (unmsys--file-name \"$@\"))) \
+		        (wd (expand-file-name default-directory))      \
+		        (backup-inhibited t)                           \
+		        (default-directory                             \
+			  (expand-file-name \"$(ELPA_DIR)\")))         \
+		    (normal-top-level-add-subdirs-to-load-path)        \
+		    (update-directory-autoloads wd)))"
 
-.PHONY: $(auto) clean distclean
-all: compile $(auto)
+.PHONY: $(AUTO) clean distclean
+all: compile $(AUTO)
 
 compile : $(elc)
 %.elc : %.el
-	$(emacs) $(batch_flags) -f batch-byte-compile $<
+	$(EMACS) $(BATCH_FLAGS) -f batch-byte-compile $<
 
-$(auto):
-	$(emacs) -batch $(auto_flags)
+$(AUTO):
+	$(EMACS) -batch $(AUTO_FLAGS)
 
 README.md: el2markdown.el nand-hdl-mode.el
-	$(emacs) -batch -l $< nand-hdl-mode.el -f el2markdown-write-readme
+	$(EMACS) -batch -l $< nand-hdl-mode.el -f el2markdown-write-readme
 	$(RM) $@~
 
 .INTERMEDIATE: el2markdown.el
 el2markdown.el:
-	$(wget) -q -O $@ "https://github.com/Lindydancer/el2markdown/raw/master/el2markdown.el"
+	$(WGET) -q -O $@ "https://github.com/Lindydancer/el2markdown/raw/master/el2markdown.el"
 
 TAGS: $(el)
 	$(RM) $@
