@@ -1,21 +1,21 @@
-;;; company-nand --- Emacs completion support for NAND hdl files.
+;;; company-nand.el --- Emacs completion support for NAND hdl files -*- lexical-binding: t; -*-
 
 ;; Author: Noah Peart <noah.v.peart@gmail.com>
 ;; URL: https://github.com/nverno/nand-hdl-mode
-;; Package-Requires: ((company "0.8.0") (cl-lib "0.5.0"))
-;; Copyright (C) 2016, Noah Peart, all rights reserved.
+;; Package-Requires: ((emacs "25.1") (company "0.8.0"))
 ;; Created: 21 August 2016
-
+;; Version: 1.0.0
+;;
 ;;; Commentary:
-
+;;
 ;;  Emacs autocompletion backend for `nand-hdl-mode' using `company-mode'.
-
+;;
 ;;; Installation:
-
+;;
 ;; Install `company-mode' and add this file to `load-path'.
 ;; Then either compile/create autoloads and load autoloads files,
 ;; or require the file in your init file:
-
+;;
 ;; ```lisp
 ;; (require 'company-nand) ; or autoload
 ;;
@@ -28,8 +28,8 @@
 ;; ```
 
 ;;; Code:
-(eval-when-compile
-  (require 'cl-lib))
+
+(eval-when-compile (require 'cl-lib))
 (require 'company)
 
 (defgroup company-nand nil
@@ -42,39 +42,42 @@
   :group 'company-nand
   :type 'sexp)
 
-(defvar company-nand-info--dir nil)
-(setq company-nand-info--dir
-      (when load-file-name
-        (expand-file-name "info" (file-name-directory load-file-name))))
+(defvar company-nand--info-dir
+  (expand-file-name
+   "info"
+   (file-name-directory
+    (cond (load-in-progress load-file-name)
+          ((and (boundp 'byte-compile-current-file) byte-compile-current-file)
+           byte-compile-current-file)
+          (t (buffer-file-name))))))
 
-(defcustom company-nand-info-dir company-nand-info--dir
+(defcustom company-nand-info-dir company-nand--info-dir
   "Location of info directory from `company-nand' files."
   :group 'company-nand
   :type 'file)
 
 (defcustom company-nand-annotation t
-  "If non-nil and boolean, show signature in company annotation, as 
-well as in minibuffer.  If string, use that as 
-annotation instead (default '<Builtin>')."
+  "This variable configures how annotations are show for completion candidates.
+If it's the symbol \\='t, signatures are shown in company annotation as
+well in the minibuffer.
+If it's a string, use the string for company annotation instead (default
+'<Builtin>')."
   :group 'company-nand
   :type '(choice string boolean))
 
-;; ------------------------------------------------------------
-;; Internal
+
 (defconst company-nand-keywords
   '("CHIP" "IN" "OUT" "PARTS" "BUILTIN" "CLOCKED"))
 
-;;* completion candidates
 (defvar company-nand-candidates-list nil
   "Cache completion candidates.")
 
 (defun company-nand-read (file)
   (with-temp-buffer
-    (insert-file-contents (expand-file-name file company-nand-info-dir))
-    (let ((data (car (read-from-string
-                      (buffer-substring-no-properties
-                       (point-min) (point-max))))))
-      data)))
+    (save-excursion
+      (insert-file-contents-literally
+       (expand-file-name file company-nand-info-dir)))
+    (read (current-buffer))))
 
 (defun company-nand-build-list ()
   "Build candidate list."
@@ -85,20 +88,20 @@ annotation instead (default '<Builtin>')."
            (cl-remove-duplicates
             (append
              (cl-loop for (k . v) in data
-                collect (propertize
-                         k
-                         'annot (or (and company-nand-annotation
-                                         (booleanp company-nand-annotation)
-                                         (cdr (assoc k sigs)))
-                                    company-nand-annotation
-                                    "<Builtin Chip>")
-                         'meta (cdr (assoc k sigs))
-                         'doc v))
+                      collect (propertize
+                               k
+                               'annot (or (and company-nand-annotation
+                                               (booleanp company-nand-annotation)
+                                               (cdr (assoc k sigs)))
+                                          company-nand-annotation
+                                          "<Builtin Chip>")
+                               'meta (cdr (assoc k sigs))
+                               'doc v))
              (cl-loop for i in company-nand-keywords
-                collect (propertize i
-                                    'meta "keyword"
-                                    'annot "<Keyword>"
-                                    'doc "")))
+                      collect (propertize i
+                                          'meta "keyword"
+                                          'annot "<Keyword>"
+                                          'doc "")))
             :test 'string=)
            #'(lambda (x y) (string> y x)))))
   company-nand-candidates-list)
@@ -109,11 +112,8 @@ annotation instead (default '<Builtin>')."
        (company-grab-symbol)))
 
 (defun company-nand-candidates (arg)
-  (all-completions arg (or company-nand-candidates-list
-                           (company-nand-build-list))))
+  (all-completions arg (or company-nand-candidates-list (company-nand-build-list))))
 
-;; ------------------------------------------------------------
-;;* Info
 (defun company-nand-meta (candidate)
   (get-text-property 0 'meta candidate))
 
@@ -122,16 +122,16 @@ annotation instead (default '<Builtin>')."
     (insert (get-text-property 0 'doc candidate))
     (goto-char (point-min))
     (company-doc-buffer
-     (buffer-substring-no-properties (line-beginning-position)
-                                     (point-max)))))
+     (buffer-substring-no-properties (line-beginning-position) (point-max)))))
 
 (defun company-nand-annotation (candidate)
   (get-text-property 0 'annot candidate))
 
-
+
 ;;;###autoload
 (defun company-nand (command &optional arg &rest _args)
-  "Company backend for NAND hardware description language files."
+  "Company backend for NAND hardware description language files.
+See `company-mode' for more information about COMMAND and ARG."
   (interactive (list 'interactive))
   (cl-case command
     (interactive (company-begin-backend 'company-nand))

@@ -1,9 +1,9 @@
-;;; nand-hdl-mode --- Major mode for NAND hardward description language files (.hdl) -*- lexical-binding: t -*-
+;;; nand-hdl-mode.el --- Major mode for NAND hdl files -*- lexical-binding: t -*-
 
 ;; Author: Noah Peart <noah.v.peart@gmail.com>
-;; URL: https://github.com/nverno/hdl-mode
-;; Package-Requires: 
-;; Copyright (C) 2016, Noah Peart, all rights reserved.
+;; URL: https://github.com/nverno/nand-hdl-mode
+;; Package-Requires: ((emacs "25.1"))
+;; Version: 1.0.0
 ;; Created: 18 August 2016
 
 ;; This file is not part of GNU Emacs.
@@ -24,12 +24,10 @@
 ;; Floor, Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
-
-;;; Description:
-
-;; Emac major mode for NAND hardward description language files (.hdl) as 
-;; defined by the coursera class nand2tetris.
-
+;;
+;; Emacs major mode for NAND hardware description language files (.hdl) from
+;; the coursera class nand2tetris.
+;;
 ;; The mode provides:
 ;;
 ;; - syntax / font-locking
@@ -42,7 +40,7 @@
 ;; - Autocompletion / dropdown help using `company-nand' with
 ;;   `company-mode' and `company-quickhelp'
 ;; - snippets to fill in chip components
-
+;;
 ;; Tools in build directory:
 ;; - Autogenerate snippets from the HDL survival website (for use with yasnippet)
 ;; - Autogenerate docs.txt from builtin chips.
@@ -70,11 +68,13 @@
 ;;
 ;; See `company-nand' for autocompletion setup.
 ;;
-;; ![example](example.png)
-
+;; ![example](doc/example.png)
+;;
 ;;; Code:
-(eval-when-compile
-  (require 'cl-lib))
+
+(eval-when-compile (require 'cl-lib))
+(declare-function yas-load-directory "yasnippet")
+(defvar yas-load-directory)
 
 (defgroup nand-hdl nil
   "Major mode for editing NAND hardware description language files."
@@ -82,34 +82,32 @@
   :prefix "nand-hdl-")
 
 (defcustom nand-hdl-directory "nand2tetris"
-  "Location of base directory 'nand2tetris', it should contain
-the 'tools' directory with the hardware simulator, etc."
-  :group 'nand-hdl
+  "Location of base directory \"nand2tetris\".
+It should contain the \"tools\" directory with the hardware simulator, etc."
   :type 'file)
 
 (defcustom nand-hdl-indent 4
   "Default indent level to use inside blocks."
-  :group 'nand-hdl
-  :type 'integer)
+  :type 'integer
+  :safe 'integerp)
 
 (defcustom nand-hdl-indent-parts 2
-  "Indentation of 'PARTS' with respect to containing block."
-  :group 'nand-hdl
-  :type 'integer)
+  "Indentation of \"PARTS\" with respect to containing block."
+  :type 'integer
+  :safe 'integerp)
 
 (defcustom nand-hdl-indent-declarations 2
   "Indentation of declarations with respect to containing block."
-  :group 'nand-hdl
-  :type 'integer)
+  :type 'integer
+  :safe 'integerp)
 
 (defcustom nand-hdl-auto-newline t
   "If non-nil, automatically newline after semicolons."
-  :group 'nand-hdl
   :type 'boolean)
 
-;;;###autoload(put 'nand-hdl-indent 'safe-local-variable 'integerp)
-;;;###autoload(put 'nand-hdl-indent-parts 'safe-local-variable 'integerp)
-;;;###autoload(put 'nand-hdl-indent-declarations 'safe-local-variable 'integerp)
+(defcustom nand-hdl-use-snippets t
+  "If non-nil, try to load yasnippet snippets."
+  :type 'boolean)
 
 (defcustom nand-hdl-highlight-doc t
   "If non-nil, highlight documentation stubs."
@@ -121,17 +119,16 @@ the 'tools' directory with the hardware simulator, etc."
   "Special face to highlight documentation (after '/**')."
   :group 'nand-hdl)
 
-(defcustom nand-hdl-shell
-  (if (eq system-type 'windows-nt) "cmd.exe" "bash")
+(defcustom nand-hdl-shell shell-file-name
   "Shell used to call NAND tools."
   :group 'nand-hdl
   :type 'file)
 
 (defcustom nand-hdl-shell-switches
-  (if (eq system-type 'windows-nt) '("/c") '(""))
+  (if (eq system-type 'windows-nt) '("/c") '("-c"))
   "Switches used with `nand-hdl-shell'."
   :group 'nand-hdl
-  :type 'listp)
+  :type '(repeat string))
 
 (defvar nand-hdl-snippet-dir nil)
 (setq nand-hdl-snippet-dir
@@ -141,20 +138,13 @@ the 'tools' directory with the hardware simulator, etc."
 
 (defvar nand-hdl-output-buffer "*Nand Output*")
 
-
-;; ------------------------------------------------------------
-;; Internal
-;; silence byte-compiler
-(defvar yas-load-directory)
-
 (defvar nand-hdl-ext
   (if (eval-when-compile (eq system-type 'windows-nt))
       ".bat" ".sh"))
 
 (defun nand-hdl-call (tool &optional call file dest display)
   (when (not (file-exists-p nand-hdl-directory))
-    (user-error "Can't find NAND root directory: %s"
-                (or nand-hdl-directory "")))
+    (user-error "Can't find NAND root directory: %s" (or nand-hdl-directory "")))
   (if nand-hdl-directory
       (let ((tp (expand-file-name (concat "tools/" tool nand-hdl-ext)
                                   nand-hdl-directory))
@@ -165,8 +155,8 @@ the 'tools' directory with the hardware simulator, etc."
             (call-process nand-hdl-shell nil dest display switches tp file)
          (concat nand-hdl-shell " " switches " " tp)))))
 
-;; ------------------------------------------------------------
-;;* Compilation
+
+;;; Compilation
 
 (require 'compile)
 
@@ -176,17 +166,17 @@ the 'tools' directory with the hardware simulator, etc."
     (nand-hdl-2
      "\\(Chip\\)\\s-*\\([^ ]+\\).* load \\(.*\\)" 3 0 0 2 2 (2 compilation-error-face))
     (nand-hdl-3
-      "\\(Comparison\\) failure at [lL]ine \\([0-9]+\\)" 1 2 nil 2)
-    ))
+      "\\(Comparison\\) failure at [lL]ine \\([0-9]+\\)" 1 2 nil 2)))
 
 ;; debug
 (defun nand-hdl-replace-compile-regexp ()
+  "Replace `nand-hdl-error-regexp-alist' entries."
   (interactive)
-  (mapcar (lambda (item)
-            (cl-delete item compilation-error-regexp-alist-alist
-                       :test (lambda (x y) (eq (car x) (car y))))
-            (push item compilation-error-regexp-alist-alist))
-          nand-hdl-error-regexp-alist))
+  (let ((nand-entries (mapcar #'car nand-hdl-error-regexp-alist)))
+    (setq compilation-error-regexp-alist-alist
+          (append nand-hdl-error-regexp-alist
+                  (seq-filter (lambda (e) (not (memq (car e) nand-entries)))
+                              compilation-error-regexp-alist-alist)))))
 
 ;; Hack to find associated files from compilation buffer when the emulator
 ;; doesn't specify a filename
@@ -202,6 +192,7 @@ the 'tools' directory with the hardware simulator, etc."
    (t (getenv "hdl-file"))))
 
 (defun nand-hdl-add-compile-regexp ()
+  "Add `nand-hdl-error-regexp-alist' entries to error list."
   (interactive)
   (when (not (assoc 'nand-hdl-3 compilation-error-regexp-alist-alist))
     (mapcar (lambda (item)
@@ -222,8 +213,7 @@ the 'tools' directory with the hardware simulator, etc."
 ;;        (re-search-forward (regexp-quote (match-string-no-properties 1)) nil t 1)
 ;;        (match-beginning 0)))))
 
-;; ------------------------------------------------------------
-;;* User Functions
+;;; User Functions
 
 (defun nand-hdl-run (&optional silent compile wait)
   "Run chip in simulator and display output:
@@ -271,7 +261,8 @@ run asynchronously.
     (find-file-other-window out)))
 
 (defun nand-hdl-compare (&optional run-first)
-  "Show comparison between output and expected results in other window."
+  "Show comparison between output and expected results in other window.
+With prefix arg, RUN-FIRST, create .out file first."
   (interactive "P")
   (let* ((buff (get-buffer-create nand-hdl-output-buffer))
          (inhibit-read-only t)
@@ -306,11 +297,8 @@ run asynchronously.
 ;;      (format "diff --unchanged-line-format=\"\" --new-line-format= %s %s"
 ;;              "" "%dn" out cmp))))
 
-
-;; ------------------------------------------------------------
-;;* Completion
+;;; Completion
 
-;; 
 (defun nand-hdl-vars-before-point ()
   (save-excursion
     (let (vin vout)
@@ -334,9 +322,8 @@ run asynchronously.
           (push (match-string-no-properties 0) vout)))
       `((,vin ,vout)))))
 
-
-;; ------------------------------------------------------------
-;;* Font-lock 
+;;; Font-locking
+
 (defconst nand-hdl-keywords
   '("CHIP" "IN" "OUT" "PARTS" "BUILTIN" "CLOCKED"))
 
@@ -345,8 +332,7 @@ run asynchronously.
     ("\\(?:IN\\|OUT\\)\\([^][ ,]+\\)" 1 font-lock-variable-name-face)
     (,(regexp-opt '("false" "true") t) . font-lock-constant-face)
     (,(regexp-opt nand-hdl-keywords) . font-lock-builtin-face)
-    ("\\([a-zA-Z0-9]+\\)\\s-*(" 1 font-lock-function-name-face)
-    ))
+    ("\\([a-zA-Z0-9]+\\)\\s-*(" 1 font-lock-function-name-face)))
 
 ;; (defun nand-hdl-syntax-propertize-function (start end)
 ;;   (goto-char start)
@@ -357,13 +343,17 @@ run asynchronously.
 ;;   (defconst nand-hdl-doc-re
 ;;     "\\(?:/\\*\\*\\([^\\(?:*/)]+)"
 
-;;* Indentation
+;;; Indentation
+
 (require 'smie)
 
 (defconst nand-hdl-grammar
   (smie-prec2->grammar
    (smie-precs->prec2
-    '((assoc "PARTS" ":") (nonassoc "IN" "OUT") (assoc ",") (assoc ";" "\n")))))
+    '((assoc "PARTS" ":")
+      (nonassoc "IN" "OUT")
+      (assoc ",")
+      (assoc ";" "\n")))))
 
 (defun nand-hdl-rules (kind token)
   (pcase (cons kind token)
@@ -379,24 +369,23 @@ run asynchronously.
          (- nand-hdl-indent nand-hdl-indent-parts)))
     (`(:list-intro . ,(or `"\n" `"")) t)))
 
-;; ------------------------------------------------------------
-;;* Abbrevs
+;;; Abbrevs
+
 (defun nand-hdl-define-abbrev (table name expansion &optional hook)
   (condition-case nil
       (define-abbrev-table name expansion hook 0 t)
     (error
      (define-abbrev-table table name expansion hook))))
 
-;;* snippets
+;;; Snippets
+
 (defun nand-hdl-maybe-load-snippets ()
   (when (and (bound-and-true-p yas-minor-mode)
              (file-exists-p nand-hdl-snippet-dir))
     (yas-load-directory nand-hdl-snippet-dir)))
-(eval-after-load "yas-minor-mode" '(nand-hdl-maybe-load-snippets))
 
-
 ;; ------------------------------------------------------------
-;;* Major mode
+;;; Major mode
 
 ;; Syntax (c/c++ style comments)
 (defvar nand-hdl-mode-syntax-table
@@ -406,7 +395,7 @@ run asynchronously.
     (modify-syntax-entry ?\n "> b" st)
     (modify-syntax-entry ?= "." st)
     st)
-  "Sytax for `nand-hdl-mode'")
+  "Syntax for `nand-hdl-mode'.")
 
 ;; Menu
 (defvar nand-hdl-menu
@@ -422,16 +411,17 @@ run asynchronously.
 (defvar nand-hdl-mode-map
   (let ((map (make-sparse-keymap)))
     (easy-menu-define nil map nil nand-hdl-menu)
-    (define-key map (kbd "<f5>")    #'nand-hdl-compile)
-    (define-key map (kbd "C-c C-e") #'nand-hdl-expected)
-    (define-key map (kbd "C-c C-c") #'nand-hdl-compare)
-    (define-key map (kbd "C-c C-o") #'nand-hdl-output)
-    (define-key map (kbd "C-c C-r") #'nand-hdl-run)
+    (define-key map (kbd "C-c C-<f5>") #'nand-hdl-compile)
+    (define-key map (kbd "C-c C-e")    #'nand-hdl-expected)
+    (define-key map (kbd "C-c C-c")    #'nand-hdl-compare)
+    (define-key map (kbd "C-c C-o")    #'nand-hdl-output)
+    (define-key map (kbd "C-c C-r")    #'nand-hdl-run)
     map))
 
 ;;;###autoload
 (define-derived-mode nand-hdl-mode prog-mode "NandHDL"
-  "Major mode for editing NAND hardware description files (.hdl).\n
+  "Major mode for editing NAND hardware description files (.hdl).
+
 \\{nand-hdl-mode-map}"
   (setq-local comment-start "// ")
   (setq-local comment-end "")
@@ -445,7 +435,8 @@ run asynchronously.
   (setq-local outline-regexp "^\\(?:CHIP\\|BUILTIN\\)")
   (smie-setup nand-hdl-grammar #'nand-hdl-rules
               :forward-token #'smie-default-forward-token
-              :backward-token #'smie-default-backward-token))
+              :backward-token #'smie-default-backward-token)
+  (nand-hdl-maybe-load-snippets))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hdl\\'" . nand-hdl-mode))

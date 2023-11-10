@@ -1,10 +1,11 @@
-*Author:* Noah Peart <noah.v.peart@gmail.com><br>
-*URL:* [https://github.com/nverno/hdl-mode](https://github.com/nverno/hdl-mode)<br>
+## Emacs major mode for Nand2Tetris(NAND) hdl files (.hdl)
 
-Description:
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-Emac major mode for NAND hardward description language files (.hdl) as 
-defined by the coursera class nand2tetris.
+Emac major  mode for NAND  hardward description  language files (.hdl)  from the
+coursera class nand2tetris.
+
+See [jack-mode](https://github.com/nverno/jack-mode) for a Jack major-mode.
 
 ## The mode provides
 
@@ -19,10 +20,12 @@ defined by the coursera class nand2tetris.
   `company-mode` and `company-quickhelp`
 
 Tools in build directory:
+
 - Autogenerate snippets from the HDL survival website (for use with yasnippet)
 - Autogenerate docs.txt from builtin chips.
 
 Todo:
+
 - Completion-at-point functions.
 - Jump to definitions
 
@@ -44,8 +47,4 @@ containing 'tools' and 'projects' directories.
 
 See `company-nand` for autocompletion setup.
 
-![example](example.png)
-
-
----
-Converted from `nand-hdl-mode.el` by [*el2markdown*](https://github.com/Lindydancer/el2markdown).
+![example](doc/example.png)

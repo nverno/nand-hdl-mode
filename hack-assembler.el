@@ -1,12 +1,11 @@
-;;; hack-assembler.el --- mode for editing Hack assembler code -*- lexical-binding: t; -*-
-
-;; This is free and unencumbered software released into the public domain.
+;;; hack-assembler.el --- Major mode for editing Hack assembler code -*- lexical-binding: t; -*-
 
 ;; Author: Noah Peart <noah.v.peart@gmail.com>
 ;; URL: https://github.com/nverno/nand-hdl-mode
-;; Package-Requires: 
+;; Version: 1.0.0
+;; Package-Requires: ((emacs "25.1"))
 ;; Created: 19 May 2021
-
+;;
 ;; This file is not part of GNU Emacs.
 ;;
 ;; This program is free software; you can redistribute it and/or
@@ -23,13 +22,13 @@
 ;; along with this program; see the file COPYING.  If not, write to
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
 ;; Floor, Boston, MA 02110-1301, USA.
-
+;;
 ;;; Commentary:
-;;; Description:
 ;;
 ;; Syntax and highlighting for Hack assembler code.
 ;;
 ;;; Code:
+
 (require 'nand-hdl-mode)                ; nand-hdl-directory
 
 (defgroup hack-assembler nil
@@ -39,14 +38,11 @@
 
 (defcustom hack-assembler-binary
   (expand-file-name (concat "tools/Assembler" nand-hdl-ext) nand-hdl-directory)
-  "Location of Assembler.[sh|bat]"
+  "Location of Assembler.[sh|bat]."
   :group 'hack-assembler
   :type 'file)
 
 ;;; Font-locking
-(defmacro hack--opt (kws)
-  `(eval-when-compile
-     (regexp-opt ,kws 'words)))
 
 (eval-and-compile
   (defconst hack-assembler-builtins
@@ -72,8 +68,8 @@
      (1 font-lock-preprocessor-face)
      (2 font-lock-variable-name-face))
     (,(concat "^\\s-*" hack-assembler-label-regexp) (1 font-lock-function-name-face))
-    (,(concat "^\\s-*" (hack--opt hack-assembler-dests)) . font-lock-keyword-face)
-    (,(hack--opt hack-assembler-instructions) . font-lock-builtin-face)))
+    (,(concat "^\\s-*" (regexp-opt hack-assembler-dests t)) . font-lock-keyword-face)
+    (,(regexp-opt hack-assembler-instructions t) . font-lock-builtin-face)))
 
 (defvar hack-assembler-mode-syntax-table
   (let ((st (make-syntax-table)))
@@ -84,7 +80,8 @@
 
 ;;;###autoload
 (define-derived-mode hack-assembler-mode prog-mode "Hack"
-  "Major mode for editing Hack assembly files.\n
+  "Major mode for editing Hack assembly files.
+
 \\{hack-assembler-mode-map}"
   (setq-local comment-start "// ")
   (setq-local comment-end "")
