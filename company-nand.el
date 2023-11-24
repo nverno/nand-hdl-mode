@@ -107,7 +107,7 @@ If it's a string, use the string for company annotation instead (default
   company-nand-candidates-list)
 
 (defun company-nand-prefix ()
-  (and (derived-mode-p major-mode company-nand-modes)
+  (and (derived-mode-p company-nand-modes)
        (not (company-in-string-or-comment))
        (company-grab-symbol)))
 
